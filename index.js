@@ -11,44 +11,44 @@ function connectToDatabase (uri) {
         console.log('=> using cached database instance');
         return Promise.resolve(cachedDb);
     }
-    return MongoClient.connect(uri)
+    return MongoClient.connect(uri, { useUnifiedTopology: true })
         .then(db => {
             cachedDb = db;
+			cachedDb = db.db('db-nw');
             return cachedDb;
+        })
+        .catch(err => {
+            console.log(JSON.stringify(err))
         });
 }
 
-function queryDatabase (db) {
-    console.log('=> query database');
-    return db.collection('items').find({}).toArray()
-        .then(() => { return { statusCode: 200, body: 'success' }; })
+function insertRecord (db, values) {
+    console.log('=> insert record');
+    const query = { id: values.id };
+    const options = { upsert: true };
+    return db.collection('coll-ipad').updateMany(query, {$set: values}, options)
+        .then(result => {
+            const { matchedCount, modifiedCount } = result;
+            console.log(`Successfully matched ${matchedCount} and modified ${modifiedCount} items.`);
+            return result
+        })
         .catch(err => {
-            console.log('=> an error occurred: ', err);
-            return { statusCode: 500, body: 'error' };
+            console.error(`Failed to update items: ${err}`);
+            return 'error';
         });
 }
 
 exports.handler = (event, context, callback) => {
-    const response = {
-        statusCode: 200,
-        body: JSON.stringify('Hello from Lambda and GitHub!'),
-        event: event
-    };
     context.callbackWaitsForEmptyEventLoop = false;
     console.log('event: ', event);
     connectToDatabase(MONGODB_URI)
-            //.then(db => queryDatabase(db))
-            //.then(result => {
-            //  console.log('=> returning result: ', result);
-            //  callback(null, result);
-            //})
-        .then(() => {
-            return callback(response);
-        })
+            .then(db => insertRecord(db, event))
+            .then(result => {
+              console.log('=> returning results: ', result);
+              return callback(null, {statusCode: 200, body: result});
+            })
         .catch(err => {
-            response.statusCode = 400;
-            response.body = err;
-            console.log('=> an error occurred: ', err);
-            callback(response);
+            console.log(err);
+            return callback({statusCode: 400, body: err});
         });
 };
