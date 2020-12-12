@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/ChrisIngoe/data-generator-lambda/issues"
   },
-  "homepage": "https://github.com/ChrisIngoe/data-generator-lambda#readme"
+  "homepage": "https://github.com/ChrisIngoe/data-generator-lambda#readme",
+  "dependencies": {
+    "mongodb": "^3.6.3"
+  }
 }
